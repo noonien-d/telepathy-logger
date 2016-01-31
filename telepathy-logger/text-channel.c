@@ -306,19 +306,31 @@ on_message_received_cb (TpTextChannel *text_chan,
   TplTextChannel *self = TPL_TEXT_CHANNEL (text_chan);
   TplTextChannelPriv *priv = self->priv;
   TplEntity *receiver;
-  TplEntity *sender;
-
-  if (priv->is_chatroom)
-    receiver = priv->remote;
-  else
-    receiver = priv->self;
+  TplEntity *sender, *realsender;
 
   sender = tpl_entity_new_from_tp_contact (
       tp_signalled_message_get_sender (TP_MESSAGE (message)),
       TPL_ENTITY_CONTACT);
 
+  if (priv->is_chatroom)
+    {
+      receiver = priv->remote;
+      realsender = sender;
+    }
+  /* set receiver to channel remote if this message is sent by myself */
+  else if (g_strcmp0(tpl_entity_get_identifier(sender), tpl_entity_get_identifier(priv->self)) == 0)
+    {
+      receiver = priv->remote;
+      realsender = priv->self;
+    }
+  else
+    {
+      receiver = priv->self;
+      realsender = sender;
+    }
+
   tpl_text_channel_store_message (self, TP_MESSAGE (message),
-      sender, receiver);
+      realsender, receiver);
 
   g_object_unref (sender);
 }
